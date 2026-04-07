@@ -111,9 +111,9 @@ Insert output into your MCP client config.
 - Monitor health endpoint and process restarts
 - Alert on elevated 5xx/502/503 rates
 - Track key usage and rate-limit events
-- Back up `data/keys.json` if using local file storage
+- Back up `data/keys.sqlite` (plus WAL/SHM sidecar files when present) if using local storage
 
 ## Notes for True Multi-Node SaaS
 
-Current key storage is file-based (`data/keys.json`).
-For horizontal scale, move key state to shared storage (SQL/Redis/document DB) and keep contract parity with current key validation behavior.
+Current key storage is SQLite-backed (`data/keys.sqlite`).
+For horizontal scale, move key state to shared storage (managed SQL/Redis/document DB) and keep contract parity with current key validation behavior.
