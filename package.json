@@ -1,0 +1,32 @@
+{
+  "name": "insect",
+  "version": "1.0.0",
+  "description": "Insect crawler with fingerprint randomization - CLI, API server, and MCP server",
+  "type": "module",
+  "main": "insect-engine.js",
+  "scripts": {
+    "engine": "node insect-engine.js",
+    "server": "node api.js",
+    "mcp": "node packages/mcp/index.js",
+    "install-browser": "node node_modules/puppeteer/install.mjs",
+    "install-mcp": "cd packages/mcp && npm install",
+    "install-all": "npm install && cd packages/mcp && npm install",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:unit": "vitest run tests/fingerprint.test.js tests/formatters.test.js tests/keys.test.js tests/auth-middleware.test.js",
+    "test:routes": "vitest run tests/routes.test.js",
+    "test:cli": "vitest run tests/cli.test.js",
+    "test:integration": "vitest run tests/engine-integration.test.js",
+    "test:mcp": "vitest run tests/mcp-api-client.test.js tests/mcp-stdio.test.js"
+  },
+  "dependencies": {
+    "express": "^5.2.1",
+    "puppeteer": "^24.4.0",
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2"
+  },
+  "devDependencies": {
+    "supertest": "^7.2.2",
+    "vitest": "^4.1.2"
+  }
+}
