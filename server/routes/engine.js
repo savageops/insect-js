@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { runInsectEngine } from "../core/engine.js";
 import { requestValidationToHttp, normalizeEngineRequest } from "../core/request.js";
+import { recordEngineOutcome } from "../observability/metrics.js";
 
 const router = Router();
 
@@ -23,6 +24,7 @@ router.post("/", async (req, res) => {
       });
     }
 
+    recordEngineOutcome(result);
     return res.json(result);
   } catch (err) {
     const validationResponse = requestValidationToHttp(err);

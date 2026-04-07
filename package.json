@@ -13,19 +13,22 @@
     "install-all": "npm install && cd packages/mcp && npm install",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:unit": "vitest run tests/fingerprint.test.js tests/formatters.test.js tests/keys.test.js tests/auth-middleware.test.js",
+    "test:unit": "vitest run tests/fingerprint.test.js tests/formatters.test.js tests/keys.test.js tests/auth-middleware.test.js tests/observability-metrics.test.js",
     "test:routes": "vitest run tests/routes.test.js",
     "test:cli": "vitest run tests/cli.test.js",
     "test:integration": "vitest run tests/engine-integration.test.js",
-    "test:mcp": "vitest run tests/mcp-api-client.test.js tests/mcp-stdio.test.js"
+    "test:mcp": "vitest run tests/mcp-api-client.test.js tests/mcp-stdio.test.js",
+    "test:live": "cross-env LIVE_INTEGRATION=1 vitest run tests/cli.test.js tests/routes.test.js tests/engine-integration.test.js"
   },
   "dependencies": {
+    "better-sqlite3": "^12.4.1",
     "express": "^5.2.1",
     "puppeteer": "^24.4.0",
     "puppeteer-extra": "^3.3.6",
     "puppeteer-extra-plugin-stealth": "^2.11.2"
   },
   "devDependencies": {
+    "cross-env": "^7.0.3",
     "supertest": "^7.2.2",
     "vitest": "^4.1.2"
   }

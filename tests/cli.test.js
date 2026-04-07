@@ -3,6 +3,7 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 
 const exec = promisify(execFile);
+const itLive = process.env.LIVE_INTEGRATION === "1" ? it : it.skip;
 
 describe("CLI insect-engine.js", () => {
   it("shows help with --help flag", async () => {
@@ -51,7 +52,7 @@ describe("CLI insect-engine.js", () => {
     }
   });
 
-  it("scrapes example.com and outputs text (live)", async () => {
+  itLive("scrapes example.com and outputs text (live)", async () => {
     const { stdout } = await exec(
       "node",
       ["insect-engine.js", "--url", "https://example.com", "--format", "text", "--timeout", "15"],
@@ -61,7 +62,7 @@ describe("CLI insect-engine.js", () => {
     expect(stdout.toLowerCase()).toMatch(/example domain/);
   }, 30000);
 
-  it("scrapes with --format json (live)", async () => {
+  itLive("scrapes with --format json (live)", async () => {
     const { stdout } = await exec(
       "node",
       ["insect-engine.js", "--url", "https://example.com", "--format", "json", "--timeout", "15"],
@@ -72,7 +73,7 @@ describe("CLI insect-engine.js", () => {
     expect(parsed.text.length).toBeGreaterThan(0);
   }, 30000);
 
-  it("scrapes with --format links (live)", async () => {
+  itLive("scrapes with --format links (live)", async () => {
     const { stdout } = await exec(
       "node",
       ["insect-engine.js", "--url", "https://example.com", "--format", "links", "--timeout", "15"],
@@ -81,7 +82,7 @@ describe("CLI insect-engine.js", () => {
     expect(stdout).toContain("http");
   }, 30000);
 
-  it("scrapes with --format markdown (live)", async () => {
+  itLive("scrapes with --format markdown (live)", async () => {
     const { stdout } = await exec(
       "node",
       ["insect-engine.js", "--url", "https://example.com", "--format", "markdown", "--timeout", "15"],
@@ -90,7 +91,7 @@ describe("CLI insect-engine.js", () => {
     expect(stdout.length).toBeGreaterThan(0);
   }, 30000);
 
-  it("prints metadata to stderr with --metadata flag (live)", async () => {
+  itLive("prints metadata to stderr with --metadata flag (live)", async () => {
     const { stderr } = await exec(
       "node",
       ["insect-engine.js", "--url", "https://example.com", "--format", "text", "--metadata", "--timeout", "15"],
@@ -102,7 +103,7 @@ describe("CLI insect-engine.js", () => {
     expect(stderr).toContain("Method:");
   }, 30000);
 
-  it("supports --query/--google search flags (live)", async () => {
+  itLive("supports --query/--google search flags (live)", async () => {
     const { stdout } = await exec(
       "node",
       [
@@ -126,7 +127,7 @@ describe("CLI insect-engine.js", () => {
     expect(Array.isArray(parsed)).toBe(true);
   }, 30000);
 
-  it("writes output to file with --output flag (live)", async () => {
+  itLive("writes output to file with --output flag (live)", async () => {
     const { resolve } = await import("node:path");
     const outputPath = resolve(process.cwd(), "data", "test-output.txt");
     const { existsSync, rmSync } = await import("node:fs");

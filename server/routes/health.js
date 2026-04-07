@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { getObservabilitySnapshot } from "../observability/metrics.js";
 
 const router = Router();
 
@@ -9,6 +10,7 @@ router.get("/", (_req, res) => {
     version: "1.0.0",
     uptime: process.uptime(),
     memory: process.memoryUsage(),
+    observability: getObservabilitySnapshot(),
   });
 });
 

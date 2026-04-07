@@ -4,6 +4,7 @@ import {
   createApiClient,
   readMcpConfig,
 } from "../packages/mcp/api-client.js";
+import { ENGINE_API_PATH } from "../server/core/contracts.js";
 
 describe("packages/mcp/api-client", () => {
   it("reads env config with defaults", () => {
@@ -16,6 +17,16 @@ describe("packages/mcp/api-client", () => {
     expect(MCP_CONFIG_EXAMPLE.mcpServers.insect).toBeTruthy();
   });
 
+  it("does not read removed legacy env aliases", () => {
+    const config = readMcpConfig({
+      STEALTH_SCRAPER_URL: "https://legacy.example",
+      STEALTH_SCRAPER_API_KEY: "legacy_key",
+    });
+
+    expect(config.apiBase).toBe("http://localhost:3000");
+    expect(config.apiKey).toBe("");
+  });
+
   it("returns ok payload for successful API responses", async () => {
     const client = createApiClient({
       apiBase: "http://localhost:3000",
@@ -26,7 +37,7 @@ describe("packages/mcp/api-client", () => {
       ),
     });
 
-    const result = await client.postJson("/api/engine", { url: "https://example.com" });
+    const result = await client.postJson(ENGINE_API_PATH, { url: "https://example.com" });
     expect(result.ok).toBe(true);
     expect(result.payload.success).toBe(true);
   });
@@ -41,7 +52,7 @@ describe("packages/mcp/api-client", () => {
       ),
     });
 
-    const result = await client.postJson("/api/engine", {});
+    const result = await client.postJson(ENGINE_API_PATH, {});
     expect(result.ok).toBe(false);
     expect(result.errorMessage).toMatch(/API Error 403/);
     expect(result.errorMessage).toMatch(/bad key/);
@@ -54,7 +65,7 @@ describe("packages/mcp/api-client", () => {
       fetchImpl: async () => new Response("upstream unavailable", { status: 502 }),
     });
 
-    const result = await client.postJson("/api/engine", {});
+    const result = await client.postJson(ENGINE_API_PATH, {});
     expect(result.ok).toBe(false);
     expect(result.errorMessage).toMatch(/upstream unavailable/);
   });
@@ -68,7 +79,7 @@ describe("packages/mcp/api-client", () => {
       },
     });
 
-    const result = await client.postJson("/api/engine", {});
+    const result = await client.postJson(ENGINE_API_PATH, {});
     expect(result.ok).toBe(false);
     expect(result.errorMessage).toMatch(/ENOTFOUND/);
   });
@@ -87,7 +98,7 @@ describe("packages/mcp/api-client", () => {
       }),
     });
 
-    const result = await client.postJson("/api/engine", {});
+    const result = await client.postJson(ENGINE_API_PATH, {});
     expect(result.ok).toBe(false);
     expect(result.errorMessage).toMatch(/timed out/i);
   });

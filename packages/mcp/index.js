@@ -9,6 +9,10 @@ import {
   readMcpConfig,
   toMcpError,
 } from "./api-client.js";
+import {
+  ENGINE_API_PATH,
+  MIN_SEARCH_COOLDOWN_SECONDS,
+} from "../../server/core/contracts.js";
 
 const { apiBase, apiKey } = readMcpConfig();
 const SEARCH_ENGINES = ["duckduckgo", "bing", "brave", "google"];
@@ -29,18 +33,18 @@ const server = new McpServer(
   { name: "insect", version: "1.0.0" },
   {
     instructions: [
-      "Stealth web scraper backed by a hosted API with rotating browser fingerprints.",
+      "Insect crawler backed by a hosted API with rotating browser fingerprints.",
       "Use these tools to run engine jobs, execute multi-engine web search fallback, discover links, and inspect metadata.",
       "For dynamic sites, prefer method='spa' or method='wait' with a selector.",
       "For infinite feeds, use method='scroll' and tune scroll_count/scroll_delay.",
-      "Search endpoints enforce a minimum 6 second cooldown per API key between query requests.",
+      `Search endpoints enforce a minimum ${MIN_SEARCH_COOLDOWN_SECONDS} second cooldown per API key between query requests.`,
       "Search fallback order is configurable, and Google is always attempted last.",
     ].join("\n"),
   },
 );
 
 async function callEngineApi(body) {
-  const result = await apiClient.postJson("/api/engine", body);
+  const result = await apiClient.postJson(ENGINE_API_PATH, body);
   if (!result.ok) {
     return toMcpError(result.errorMessage);
   }
@@ -107,7 +111,7 @@ server.tool(
   [
     "Run a multi-engine web search with fallback and return ranked results.",
     "Default order: duckduckgo,bing,brave,google (Google is always forced to the final attempt).",
-    "Search requests are rate-limited with a minimum 6 second cooldown per API key.",
+    `Search requests are rate-limited with a minimum ${MIN_SEARCH_COOLDOWN_SECONDS} second cooldown per API key.`,
     "Output can be text, json, links, or markdown.",
   ].join("\n"),
   {
@@ -137,7 +141,7 @@ server.tool(
   [
     "Run a multi-engine web search with fallback and return ranked results.",
     "Default order: duckduckgo,bing,brave,google (Google is always forced to the final attempt).",
-    "Search requests are rate-limited with a minimum 6 second cooldown per API key.",
+    `Search requests are rate-limited with a minimum ${MIN_SEARCH_COOLDOWN_SECONDS} second cooldown per API key.`,
     "Output can be text, json, links, or markdown.",
   ].join("\n"),
   {

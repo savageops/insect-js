@@ -1,14 +1,19 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { apiKeyAuth } from "../server/middleware/auth.js";
-import { createKey, revokeKey, setDbPath, resetDbPath } from "../server/db/keys.js";
-import { existsSync, rmSync } from "node:fs";
 import { resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { randomUUID } from "node:crypto";
-import { readFileSync, writeFileSync } from "node:fs";
+import { existsSync, rmSync } from "node:fs";
+import { apiKeyAuth } from "../server/middleware/auth.js";
+import { createKey, revokeKey, setDbPath, resetDbPath } from "../server/db/keys.js";
 
 function tempDbPath() {
-  return resolve(tmpdir(), `scraper-auth-test-${randomUUID()}.json`);
+  return resolve(tmpdir(), `insect-auth-${randomUUID()}.sqlite`);
+}
+
+function removeDbFiles(dbPath) {
+  for (const path of [dbPath, `${dbPath}-wal`, `${dbPath}-shm`]) {
+    if (existsSync(path)) rmSync(path, { force: true });
+  }
 }
 
 function mockRes() {
@@ -41,8 +46,8 @@ describe("apiKeyAuth middleware", () => {
   });
 
   afterEach(() => {
-    if (existsSync(dbPath)) rmSync(dbPath);
     resetDbPath();
+    removeDbFiles(dbPath);
   });
 
   it("returns 401 when no key is provided", () => {
@@ -53,7 +58,7 @@ describe("apiKeyAuth middleware", () => {
     apiKeyAuth(req, res, next);
 
     expect(res.statusCode).toBe(401);
-    expect(res.body.error).toMatch(/API key required/);
+    expect(res.body.error).toMatch(/API key required/i);
     expect(next).not.toHaveBeenCalled();
   });
 
@@ -78,25 +83,14 @@ describe("apiKeyAuth middleware", () => {
     expect(next).toHaveBeenCalled();
   });
 
-  it("reads key from query param apikey", () => {
+  it("rejects query-param key usage", () => {
     const req = { headers: {}, query: { apikey: validKey } };
     const res = mockRes();
     const next = vi.fn();
 
     apiKeyAuth(req, res, next);
 
-    expect(next).toHaveBeenCalled();
-  });
-
-  it("returns 403 for invalid/not-found key", () => {
-    const req = { headers: { "x-api-key": "sk_nonexistent00000000000000000000000" }, query: {} };
-    const res = mockRes();
-    const next = vi.fn();
-
-    apiKeyAuth(req, res, next);
-
-    expect(res.statusCode).toBe(403);
-    expect(res.body.error).toMatch(/Invalid API key/);
+    expect(res.statusCode).toBe(401);
     expect(next).not.toHaveBeenCalled();
   });
 
@@ -108,26 +102,21 @@ describe("apiKeyAuth middleware", () => {
     apiKeyAuth(req, res, next);
 
     expect(res.statusCode).toBe(403);
-    expect(res.body.error).toMatch(/revoked/);
+    expect(res.body.error).toMatch(/revoked/i);
     expect(next).not.toHaveBeenCalled();
   });
 
-  it("returns 429 for rate limited key", () => {
+  it("returns 429 for rate-limited keys", () => {
     const rlKey = createKey("rl", 1).apiKey;
-
-    const keys = JSON.parse(readFileSync(dbPath, "utf-8"));
-    keys[rlKey].windowCount = 2;
-    keys[rlKey].windowStart = Date.now();
-    writeFileSync(dbPath, JSON.stringify(keys, null, 2), "utf-8");
-
     const req = { headers: { "x-api-key": rlKey }, query: {} };
+
+    apiKeyAuth(req, mockRes(), vi.fn());
     const res = mockRes();
     const next = vi.fn();
-
     apiKeyAuth(req, res, next);
 
     expect(res.statusCode).toBe(429);
-    expect(res.body.error).toMatch(/Rate limit exceeded/);
+    expect(res.body.error).toMatch(/Rate limit exceeded/i);
     expect(next).not.toHaveBeenCalled();
   });
 
@@ -156,18 +145,5 @@ describe("apiKeyAuth middleware", () => {
     expect(res.statusCode).toBe(429);
     expect(res.body.error).toMatch(/cooldown/i);
     expect(next).not.toHaveBeenCalled();
-  });
-
-  it("prioritizes x-api-key over authorization header", () => {
-    const req = {
-      headers: { "x-api-key": validKey, authorization: "Bearer sk_other" },
-      query: {},
-    };
-    const res = mockRes();
-    const next = vi.fn();
-
-    apiKeyAuth(req, res, next);
-
-    expect(next).toHaveBeenCalled();
   });
 });

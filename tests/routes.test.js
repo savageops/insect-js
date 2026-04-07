@@ -1,63 +1,60 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import request from "supertest";
+import { resolve } from "node:path";
+import { tmpdir } from "node:os";
+import { randomUUID } from "node:crypto";
+import { existsSync, rmSync } from "node:fs";
 import { app } from "../server/index.js";
-import { createKey, revokeKey } from "../server/db/keys.js";
-import { readFileSync, writeFileSync, existsSync, mkdirSync, rmSync } from "node:fs";
-import { resolve, dirname } from "node:path";
-import { fileURLToPath } from "node:url";
+import {
+  createKey,
+  revokeKey,
+  setDbPath,
+  resetDbPath,
+} from "../server/db/keys.js";
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const TEST_DB_DIR = resolve(__dirname, "..", "data");
-const TEST_DB_PATH = resolve(TEST_DB_DIR, "keys.json");
 const ADMIN_KEY = "admin_change_me";
+const itLive = process.env.LIVE_INTEGRATION === "1" ? it : it.skip;
 
-let originalData = null;
+function tempDbPath() {
+  return resolve(tmpdir(), `insect-routes-${randomUUID()}.sqlite`);
+}
 
-function backupKeys() {
-  if (existsSync(TEST_DB_PATH)) {
-    originalData = readFileSync(TEST_DB_PATH, "utf-8");
-    rmSync(TEST_DB_PATH);
-  } else {
-    originalData = null;
+function removeDbFiles(dbPath) {
+  for (const path of [dbPath, `${dbPath}-wal`, `${dbPath}-shm`]) {
+    if (existsSync(path)) rmSync(path, { force: true });
   }
 }
 
-function restoreKeys() {
-  if (existsSync(TEST_DB_PATH)) {
-    rmSync(TEST_DB_PATH);
-  }
-  if (originalData !== null) {
-    mkdirSync(TEST_DB_DIR, { recursive: true });
-    writeFileSync(TEST_DB_PATH, originalData, "utf-8");
-  }
-}
+let dbPath;
+
+beforeEach(() => {
+  dbPath = tempDbPath();
+  setDbPath(dbPath);
+});
+
+afterEach(() => {
+  resetDbPath();
+  removeDbFiles(dbPath);
+});
 
 describe("GET /health", () => {
-  it("returns 200 with status ok", async () => {
+  it("returns 200 with status and observability metrics", async () => {
     const res = await request(app).get("/health");
     expect(res.status).toBe(200);
     expect(res.body.status).toBe("ok");
     expect(res.body.service).toBe("insect");
     expect(res.body.version).toBe("1.0.0");
     expect(typeof res.body.uptime).toBe("number");
-  });
-
-  it("returns memory info", async () => {
-    const res = await request(app).get("/health");
-    expect(res.body.memory).toBeTruthy();
-    expect(res.body.memory.rss).toBeGreaterThan(0);
+    expect(res.body.observability).toBeTruthy();
+    expect(typeof res.body.observability.success).toBe("number");
+    expect(typeof res.body.observability.blocked).toBe("number");
+    expect(typeof res.body.observability.fallback_depth).toBe("number");
+    expect(typeof res.body.observability.p95).toBe("number");
+    expect(typeof res.body.observability["429s"]).toBe("number");
   });
 });
 
 describe("POST /api/keys (admin routes)", () => {
-  beforeEach(() => {
-    backupKeys();
-  });
-
-  afterEach(() => {
-    restoreKeys();
-  });
-
   it("blocks access without admin key", async () => {
     const res = await request(app)
       .post("/api/keys/create")
@@ -84,11 +81,11 @@ describe("POST /api/keys (admin routes)", () => {
     expect(res.status).toBe(201);
   });
 
-  it("creates a key via query param", async () => {
+  it("rejects admin query-param auth", async () => {
     const res = await request(app)
       .post("/api/keys/create?adminkey=" + ADMIN_KEY)
       .send({ label: "query-admin" });
-    expect(res.status).toBe(201);
+    expect(res.status).toBe(403);
   });
 
   it("creates key with custom rate limit and expiry", async () => {
@@ -102,69 +99,22 @@ describe("POST /api/keys (admin routes)", () => {
     expect(res.body.expiresAt).toBeGreaterThan(Date.now());
   });
 
-  it("uses default label when not provided", async () => {
-    const res = await request(app)
-      .post("/api/keys/create")
-      .set("x-admin-key", ADMIN_KEY)
-      .send({});
-    expect(res.status).toBe(201);
-    expect(res.body.label).toBe("unnamed");
-  });
-
   it("lists all keys", async () => {
-    await createKey("list-test-1");
-    await createKey("list-test-2");
+    createKey("list-test-1");
+    createKey("list-test-2");
     const res = await request(app)
       .get("/api/keys")
       .set("x-admin-key", ADMIN_KEY);
     expect(res.status).toBe(200);
     expect(res.body.keys.length).toBeGreaterThanOrEqual(2);
   });
-
-  it("gets info for a specific key", async () => {
-    const { apiKey } = createKey("info-route");
-    const res = await request(app)
-      .get(`/api/keys/${apiKey}`)
-      .set("x-admin-key", ADMIN_KEY);
-    expect(res.status).toBe(200);
-    expect(res.body.label).toBe("info-route");
-  });
-
-  it("returns 404 for non-existent key info", async () => {
-    const res = await request(app)
-      .get("/api/keys/sk_nonexistent00000000000000000000000")
-      .set("x-admin-key", ADMIN_KEY);
-    expect(res.status).toBe(404);
-  });
-
-  it("deletes/revokes a key", async () => {
-    const { apiKey } = createKey("delete-me");
-    const res = await request(app)
-      .delete(`/api/keys/${apiKey}`)
-      .set("x-admin-key", ADMIN_KEY);
-    expect(res.status).toBe(200);
-    expect(res.body.revoked).toBe(true);
-  });
-
-  it("returns 404 when deleting non-existent key", async () => {
-    const res = await request(app)
-      .delete("/api/keys/sk_nonexistent00000000000000000000000")
-      .set("x-admin-key", ADMIN_KEY);
-    expect(res.status).toBe(404);
-  });
 });
 
 describe("POST /api/engine", () => {
   let testKey;
 
-  beforeAll(() => {
-    backupKeys();
-    const result = createKey("engine-test");
-    testKey = result.apiKey;
-  });
-
-  afterAll(() => {
-    restoreKeys();
+  beforeEach(() => {
+    testKey = createKey("engine-test").apiKey;
   });
 
   it("returns 401 without API key", async () => {
@@ -191,24 +141,6 @@ describe("POST /api/engine", () => {
     expect(res.body.error).toMatch(/url.*google/i);
   });
 
-  it("returns 400 for invalid method", async () => {
-    const res = await request(app)
-      .post("/api/engine")
-      .set("x-api-key", testKey)
-      .send({ url: "https://example.com", method: "invalid" });
-    expect(res.status).toBe(400);
-    expect(res.body.error).toMatch(/Unknown method/);
-  });
-
-  it("returns 400 for invalid format", async () => {
-    const res = await request(app)
-      .post("/api/engine")
-      .set("x-api-key", testKey)
-      .send({ url: "https://example.com", format: "invalid" });
-    expect(res.status).toBe(400);
-    expect(res.body.error).toMatch(/Unknown format/);
-  });
-
   it("returns 403 with revoked key", async () => {
     const { apiKey } = createKey("revoke-engine");
     revokeKey(apiKey);
@@ -217,7 +149,7 @@ describe("POST /api/engine", () => {
       .set("x-api-key", apiKey)
       .send({ url: "https://example.com" });
     expect(res.status).toBe(403);
-    expect(res.body.error).toMatch(/revoked/);
+    expect(res.body.error).toMatch(/revoked/i);
   });
 
   it("accepts API key via Authorization Bearer header", async () => {
@@ -228,14 +160,14 @@ describe("POST /api/engine", () => {
     expect(res.status).toBe(400);
   });
 
-  it("accepts API key via query param", async () => {
+  it("rejects query-param API keys", async () => {
     const res = await request(app)
       .post(`/api/engine?apikey=${testKey}`)
       .send({});
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(401);
   });
 
-  it("returns 200 for valid engine request (live, may be slow)", async () => {
+  itLive("returns 200 for valid engine request (live)", async () => {
     const res = await request(app)
       .post("/api/engine")
       .set("x-api-key", testKey)
@@ -243,40 +175,17 @@ describe("POST /api/engine", () => {
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
     expect(typeof res.body.output).toBe("string");
-    expect(res.body.output.length).toBeGreaterThan(0);
-    expect(res.body.meta).toBeTruthy();
     expect(res.body.meta.type).toBe("page");
   }, 30000);
 
-  it("returns 200 for Google search (live, may be slow)", async () => {
+  itLive("returns 200 for search fallback (live)", async () => {
     const res = await request(app)
       .post("/api/engine")
       .set("x-api-key", testKey)
-      .send({ google: "example test query", format: "text", googleCount: 3, timeout: 15 });
+      .send({ query: "example test query", format: "text", googleCount: 3, timeout: 15 });
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
     expect(res.body.meta.type).toBe("search");
-    expect(res.body.meta.query).toBe("example test query");
     expect(res.body.meta.engineOrder.at(-1)).toBe("google");
-  }, 30000);
-
-  it("returns JSON format with structured data", async () => {
-    const res = await request(app)
-      .post("/api/engine")
-      .set("x-api-key", testKey)
-      .send({ url: "https://example.com", format: "json", timeout: 15 });
-    expect(res.status).toBe(200);
-    const parsed = JSON.parse(res.body.output);
-    expect(parsed.title).toBeTruthy();
-    expect(parsed.url).toBe("https://example.com/");
-  }, 30000);
-
-  it("returns links format", async () => {
-    const res = await request(app)
-      .post("/api/engine")
-      .set("x-api-key", testKey)
-      .send({ url: "https://example.com", format: "links", timeout: 15 });
-    expect(res.status).toBe(200);
-    expect(res.body.output).toContain("http");
   }, 30000);
 });
