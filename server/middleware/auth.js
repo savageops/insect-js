@@ -36,7 +36,14 @@ export function apiKeyAuth(req, res, next) {
       cooldown: `Search cooldown active. Retry after ${result.retryAfter}s. Minimum ${result.cooldownSeconds || MIN_SEARCH_COOLDOWN_SECONDS}s between search queries per API key.`,
     };
     const status = result.reason === "rate_limited" || result.reason === "cooldown" ? 429 : 403;
-    return res.status(status).json({ error: messages[result.reason] || "Invalid API key." });
+    return res.status(status).json({
+      error: messages[result.reason] || "Invalid API key.",
+      code: result.reason || "invalid_key",
+      retryAfter: Number.isFinite(result.retryAfter) ? result.retryAfter : undefined,
+      cooldownSeconds: Number.isFinite(result.cooldownSeconds)
+        ? result.cooldownSeconds
+        : (result.reason === "cooldown" ? MIN_SEARCH_COOLDOWN_SECONDS : undefined),
+    });
   }
 
   next();

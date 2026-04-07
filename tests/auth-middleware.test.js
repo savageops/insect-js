@@ -132,6 +132,8 @@ describe("apiKeyAuth middleware", () => {
 
     expect(res.statusCode).toBe(429);
     expect(res.body.error).toMatch(/Rate limit exceeded/i);
+    expect(res.body.code).toBe("rate_limited");
+    expect(typeof res.body.retryAfter).toBe("number");
     expect(next).not.toHaveBeenCalled();
   });
 
@@ -159,6 +161,9 @@ describe("apiKeyAuth middleware", () => {
 
     expect(res.statusCode).toBe(429);
     expect(res.body.error).toMatch(/cooldown/i);
+    expect(res.body.code).toBe("cooldown");
+    expect(typeof res.body.retryAfter).toBe("number");
+    expect(res.body.cooldownSeconds).toBe(6);
     expect(next).not.toHaveBeenCalled();
   });
 });
