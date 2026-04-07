@@ -6,36 +6,18 @@ import healthRouter from "./routes/health.js";
 import { ENGINE_API_PATH } from "./core/contracts.js";
 import { logError, logEvent } from "./observability/logging.js";
 import { recordHttpResponse } from "./observability/metrics.js";
+import { firstHeaderValue, readBearerToken } from "./core/http-headers.js";
 
 const PORT = process.env.PORT || 3000;
 const ADMIN_KEY = process.env.ADMIN_KEY
   || (process.env.NODE_ENV === "production" ? null : "admin_change_me");
 
-function firstHeaderValue(value) {
-  if (typeof value === "string") {
-    const normalized = value.trim();
-    return normalized.length > 0 ? normalized : null;
-  }
-  if (Array.isArray(value)) {
-    for (const item of value) {
-      if (typeof item !== "string") continue;
-      const normalized = item.trim();
-      if (normalized.length > 0) return normalized;
-    }
-  }
-  return null;
-}
-
 function readAdminKey(req) {
   const headerKey = firstHeaderValue(req.headers["x-admin-key"]);
   if (headerKey) return headerKey;
 
-  const authHeader = firstHeaderValue(req.headers.authorization);
-  if (authHeader) {
-    const bearerMatch = authHeader.match(/^bearer\s+(.+)$/i);
-    const bearerToken = bearerMatch?.[1]?.trim();
-    if (bearerToken) return bearerToken;
-  }
+  const bearerToken = readBearerToken(req.headers.authorization);
+  if (bearerToken) return bearerToken;
   return null;
 }
 
