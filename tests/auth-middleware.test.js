@@ -83,6 +83,21 @@ describe("apiKeyAuth middleware", () => {
     expect(next).toHaveBeenCalled();
   });
 
+  it("reads key from array-form headers", () => {
+    const req = {
+      headers: {
+        "x-api-key": ["", ` ${validKey} `],
+      },
+      query: {},
+    };
+    const res = mockRes();
+    const next = vi.fn();
+
+    apiKeyAuth(req, res, next);
+
+    expect(next).toHaveBeenCalled();
+  });
+
   it("rejects query-param key usage", () => {
     const req = { headers: {}, query: { apikey: validKey } };
     const res = mockRes();

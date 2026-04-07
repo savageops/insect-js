@@ -11,12 +11,27 @@ const PORT = process.env.PORT || 3000;
 const ADMIN_KEY = process.env.ADMIN_KEY
   || (process.env.NODE_ENV === "production" ? null : "admin_change_me");
 
-function readAdminKey(req) {
-  const headerKey = req.headers["x-admin-key"];
-  if (typeof headerKey === "string" && headerKey.trim()) return headerKey.trim();
+function firstHeaderValue(value) {
+  if (typeof value === "string") {
+    const normalized = value.trim();
+    return normalized.length > 0 ? normalized : null;
+  }
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      if (typeof item !== "string") continue;
+      const normalized = item.trim();
+      if (normalized.length > 0) return normalized;
+    }
+  }
+  return null;
+}
 
-  const authHeader = req.headers.authorization;
-  if (typeof authHeader === "string") {
+function readAdminKey(req) {
+  const headerKey = firstHeaderValue(req.headers["x-admin-key"]);
+  if (headerKey) return headerKey;
+
+  const authHeader = firstHeaderValue(req.headers.authorization);
+  if (authHeader) {
     const bearerMatch = authHeader.match(/^bearer\s+(.+)$/i);
     const bearerToken = bearerMatch?.[1]?.trim();
     if (bearerToken) return bearerToken;
@@ -62,6 +77,11 @@ app.use("/api/keys", (req, res, next) => {
 }, authRouter);
 
 app.use((err, _req, res, _next) => {
+  const parseFailed = err?.type === "entity.parse.failed"
+    || (err instanceof SyntaxError && Object.prototype.hasOwnProperty.call(err, "body"));
+  if (parseFailed) {
+    return res.status(400).json({ error: "Invalid JSON request body." });
+  }
   logError("http.unhandled_error", err);
   res.status(500).json({ error: "Internal server error" });
 });

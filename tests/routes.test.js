@@ -175,6 +175,16 @@ describe("POST /api/engine", () => {
     expect(res.status).toBe(401);
   });
 
+  it("returns 400 for malformed JSON body", async () => {
+    const res = await request(app)
+      .post("/api/engine")
+      .set("x-api-key", testKey)
+      .set("Content-Type", "application/json")
+      .send("{ malformed");
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/Invalid JSON/i);
+  });
+
   itLive("returns 200 for valid engine request (live)", async () => {
     const res = await request(app)
       .post("/api/engine")

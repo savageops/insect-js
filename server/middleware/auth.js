@@ -1,13 +1,29 @@
 import { validateKey } from "../db/keys.js";
 import { MIN_SEARCH_COOLDOWN_SECONDS } from "../core/contracts.js";
 
-function readApiKey(req) {
-  const headerKey = req.headers["x-api-key"];
-  if (typeof headerKey === "string" && headerKey.trim()) return headerKey.trim();
+function firstHeaderValue(value) {
+  if (typeof value === "string") {
+    const normalized = value.trim();
+    return normalized.length > 0 ? normalized : null;
+  }
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      if (typeof item !== "string") continue;
+      const normalized = item.trim();
+      if (normalized.length > 0) return normalized;
+    }
+  }
+  return null;
+}
 
-  const authHeader = req.headers.authorization;
-  if (typeof authHeader === "string" && authHeader.toLowerCase().startsWith("bearer ")) {
-    const bearerValue = authHeader.slice(7).trim();
+function readApiKey(req) {
+  const headerKey = firstHeaderValue(req.headers["x-api-key"]);
+  if (headerKey) return headerKey;
+
+  const authHeader = firstHeaderValue(req.headers.authorization);
+  if (authHeader) {
+    const bearerMatch = authHeader.match(/^bearer\s+(.+)$/i);
+    const bearerValue = bearerMatch?.[1]?.trim();
     if (bearerValue) return bearerValue;
   }
   return null;
