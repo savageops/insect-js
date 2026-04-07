@@ -11,12 +11,26 @@ const PORT = process.env.PORT || 3000;
 const ADMIN_KEY = process.env.ADMIN_KEY
   || (process.env.NODE_ENV === "production" ? null : "admin_change_me");
 
+function readAdminKey(req) {
+  const headerKey = req.headers["x-admin-key"];
+  if (typeof headerKey === "string" && headerKey.trim()) return headerKey.trim();
+
+  const authHeader = req.headers.authorization;
+  if (typeof authHeader === "string") {
+    const bearerMatch = authHeader.match(/^bearer\s+(.+)$/i);
+    const bearerToken = bearerMatch?.[1]?.trim();
+    if (bearerToken) return bearerToken;
+  }
+  return null;
+}
+
 const app = express();
 app.use(express.json({ limit: "10mb" }));
 
 app.use((req, res, next) => {
   const startedAt = process.hrtime.bigint();
-  const sanitizedPath = req.originalUrl.split("?")[0];
+  const rawPath = req.originalUrl || req.url || "/";
+  const sanitizedPath = rawPath.split("?")[0];
   res.on("finish", () => {
     const durationMs = Number(process.hrtime.bigint() - startedAt) / 1_000_000;
     recordHttpResponse({ statusCode: res.statusCode, durationMs });
@@ -40,8 +54,7 @@ app.use("/api/keys", (req, res, next) => {
       error: "Server misconfigured: ADMIN_KEY must be set in production.",
     });
   }
-  const key = req.headers["x-admin-key"]
-    || req.headers.authorization?.replace("Bearer ", "");
+  const key = readAdminKey(req);
   if (key !== ADMIN_KEY) {
     return res.status(403).json({ error: "Admin key required via x-admin-key or Authorization header." });
   }

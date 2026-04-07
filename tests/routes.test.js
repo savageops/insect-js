@@ -81,6 +81,14 @@ describe("POST /api/keys (admin routes)", () => {
     expect(res.status).toBe(201);
   });
 
+  it("creates a key via lowercase bearer authorization", async () => {
+    const res = await request(app)
+      .post("/api/keys/create")
+      .set("authorization", `bearer ${ADMIN_KEY}`)
+      .send({ label: "bearer-admin-lowercase" });
+    expect(res.status).toBe(201);
+  });
+
   it("rejects admin query-param auth", async () => {
     const res = await request(app)
       .post("/api/keys/create?adminkey=" + ADMIN_KEY)
