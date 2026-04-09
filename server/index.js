@@ -1,9 +1,13 @@
 import express from "express";
 import { apiKeyAuth } from "./middleware/auth.js";
 import engineRouter from "./routes/engine.js";
+import youtubeTranscriptRouter from "./routes/youtube-transcript.js";
 import authRouter from "./routes/auth.js";
 import healthRouter from "./routes/health.js";
-import { ENGINE_API_PATH } from "./core/contracts.js";
+import {
+  ENGINE_API_PATH,
+  YOUTUBE_TRANSCRIPT_API_PATH,
+} from "./core/contracts.js";
 import { logError, logEvent } from "./observability/logging.js";
 import { recordHttpResponse } from "./observability/metrics.js";
 import { firstHeaderValue, readBearerToken } from "./core/http-headers.js";
@@ -44,6 +48,7 @@ app.use((req, res, next) => {
 app.use("/health", healthRouter);
 
 app.use(ENGINE_API_PATH, apiKeyAuth, engineRouter);
+app.use(YOUTUBE_TRANSCRIPT_API_PATH, apiKeyAuth, youtubeTranscriptRouter);
 
 app.use("/api/keys", (req, res, next) => {
   if (!ADMIN_KEY) {
@@ -74,6 +79,7 @@ export function startServer(port) {
       service: "insect",
       port: Number(port || PORT),
       engine_path: ENGINE_API_PATH,
+      youtube_transcript_path: YOUTUBE_TRANSCRIPT_API_PATH,
     });
   });
   return server;

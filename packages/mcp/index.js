@@ -12,10 +12,12 @@ import {
 import {
   ENGINE_API_PATH,
   MIN_SEARCH_COOLDOWN_SECONDS,
+  YOUTUBE_TRANSCRIPT_API_PATH,
 } from "../../server/core/contracts.js";
 
 const { apiBase, apiKey } = readMcpConfig();
 const SEARCH_ENGINES = ["duckduckgo", "bing", "brave", "google"];
+const TRANSCRIPT_ADAPTERS = ["insect_native", "insect_signal", "invidious", "piped", "yt_dlp"];
 
 if (!apiKey) {
   console.error("ERROR: INSECT_API_KEY env var is required.");
@@ -34,7 +36,7 @@ const server = new McpServer(
   {
     instructions: [
       "Insect crawler backed by a hosted API with rotating browser fingerprints.",
-      "Use these tools to run engine jobs, execute multi-engine web search fallback, discover links, and inspect metadata.",
+      "Use these tools to run engine jobs, execute multi-engine web search fallback, discover links, inspect metadata, and fetch YouTube transcripts.",
       "For dynamic sites, prefer method='spa' or method='wait' with a selector.",
       "For infinite feeds, use method='scroll' and tune scroll_count/scroll_delay.",
       `Search endpoints enforce a minimum ${MIN_SEARCH_COOLDOWN_SECONDS} second cooldown per API key between query requests.`,
@@ -55,6 +57,9 @@ function buildMetaSummary(meta) {
   if (!meta) return "";
   if (meta.type === "search" || meta.type === "google") {
     return `\n\n---\nQuery: "${meta.query}" | Engine: ${meta.engine || "none"} | Results: ${meta.resultCount} | ${meta.elapsed}s`;
+  }
+  if (meta.type === "youtube_transcript") {
+    return `\n\n---\nVideo: ${meta.videoId} | Method: ${meta.method || "none"} | Segments: ${meta.segmentCount || 0} | ${meta.elapsed}s`;
   }
   if (meta.type === "page") {
     return `\n\n---\nMeta: ${meta.textLength || 0} chars | ${meta.linksFound || 0} links | ${meta.elapsed}s`;
@@ -162,6 +167,51 @@ server.tool(
 
     return {
       content: [{ type: "text", text: asText(payload.output) + buildMetaSummary(payload.meta) }],
+    };
+  },
+);
+
+server.tool(
+  "transcribe-youtube",
+  [
+    "Fetch a YouTube transcript using a resilient adapter chain.",
+    "Fallback order defaults to: insect_native -> insect_signal -> invidious -> piped -> yt_dlp.",
+    "When one adapter fails, Insect automatically tries the next.",
+    "Insect-native methods are direct integration paths without third-party API dependencies.",
+    "Output supports text, json, and markdown.",
+  ].join("\n"),
+  {
+    url: z.string().url().optional().describe("YouTube video URL."),
+    video_id: z.string().optional().describe("YouTube video ID (11 chars)."),
+    language: z.string().default("en").describe("Preferred transcript language tag."),
+    format: z.enum(["text", "json", "markdown"]).default("text"),
+    timeout: z.number().int().min(5).max(120).default(20),
+    include_segments: z.boolean().default(false),
+    include_auto_captions: z.boolean().default(true),
+    methods: z.array(z.enum(TRANSCRIPT_ADAPTERS)).optional(),
+  },
+  async (params) => {
+    if (!params.url && !params.video_id) {
+      return toMcpError("Either 'url' or 'video_id' is required.");
+    }
+
+    const result = await apiClient.postJson(YOUTUBE_TRANSCRIPT_API_PATH, {
+      url: params.url,
+      videoId: params.video_id,
+      language: params.language,
+      format: params.format,
+      timeout: params.timeout,
+      includeSegments: params.include_segments,
+      includeAutoCaptions: params.include_auto_captions,
+      methods: params.methods,
+    });
+
+    if (!result.ok) {
+      return toMcpError(result.errorMessage);
+    }
+
+    return {
+      content: [{ type: "text", text: asText(result.payload.output) + buildMetaSummary(result.payload.meta) }],
     };
   },
 );

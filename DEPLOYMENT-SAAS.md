@@ -5,6 +5,7 @@
 Insect is designed as:
 
 - one hosted API service for extraction (`/api/engine`)
+- one hosted API service for YouTube transcript extraction (`/api/youtube/transcript`)
 - many consumer API keys (per user/team/workspace)
 - optional MCP clients running anywhere that call your hosted API
 
@@ -20,6 +21,9 @@ Recommended pattern:
 - `PORT`
 - `ADMIN_KEY`
 - `NODE_ENV=production` (recommended for hosted environments)
+- `INSECT_INVIDIOUS_INSTANCES` (optional CSV override)
+- `INSECT_PIPED_INSTANCES` (optional CSV override)
+- `INSECT_YTDLP_COMMANDS` (optional CSV command fallback list)
 
 For MCP clients:
 
@@ -72,7 +76,8 @@ bash scripts/smoke-test.sh --base-url https://api.yourdomain.com --api-key sk_xx
 Ensure:
 
 - `/health` is reachable publicly or from intended clients
-- `/api/engine` works with valid key
+- `/api/engine` works with valid key (`x-api-key` or `Authorization: Bearer`)
+- `/api/youtube/transcript` works for a known public video ID
 - invalid key returns `403`
 - rate-limited key returns `429`
 - search cooldown responses return `429` with `retryAfter` messaging
@@ -111,6 +116,7 @@ Insert output into your MCP client config.
 - Monitor health endpoint and process restarts
 - Alert on elevated 5xx/502/503 rates
 - Track key usage and rate-limit events
+- Track transcript adapter success distribution by method (`insect_native`, `insect_signal`, `invidious`, `piped`, `yt_dlp`)
 - Back up `data/keys.sqlite` (plus WAL/SHM sidecar files when present) if using local storage
 
 ## Notes for True Multi-Node SaaS

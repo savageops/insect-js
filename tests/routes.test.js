@@ -207,3 +207,46 @@ describe("POST /api/engine", () => {
     expect(res.body.meta.engineOrder.at(-1)).toBe("google");
   }, 30000);
 });
+
+describe("POST /api/youtube/transcript", () => {
+  let testKey;
+
+  beforeEach(() => {
+    testKey = createKey("youtube-transcript-test").apiKey;
+  });
+
+  it("returns 401 without API key", async () => {
+    const res = await request(app)
+      .post("/api/youtube/transcript")
+      .send({ videoId: "dQw4w9WgXcQ" });
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 400 when no video target is supplied", async () => {
+    const res = await request(app)
+      .post("/api/youtube/transcript")
+      .set("x-api-key", testKey)
+      .send({});
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe("VALIDATION_ERROR");
+  });
+
+  it("accepts API key via Authorization Bearer header", async () => {
+    const res = await request(app)
+      .post("/api/youtube/transcript")
+      .set("authorization", `Bearer ${testKey}`)
+      .send({});
+    expect(res.status).toBe(400);
+  });
+
+  itLive("returns 200 for valid transcript request (live)", async () => {
+    const res = await request(app)
+      .post("/api/youtube/transcript")
+      .set("x-api-key", testKey)
+      .send({ videoId: "dQw4w9WgXcQ", format: "text", timeout: 20 });
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(typeof res.body.output).toBe("string");
+    expect(res.body.meta.type).toBe("youtube_transcript");
+  }, 45000);
+});

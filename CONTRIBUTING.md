@@ -74,6 +74,7 @@ When behavior changes, update relevant docs:
 - `DEPLOYMENT-SAAS.md`
 - `.docs/api-reference.md`
 - `.docs/architecture.md`
+- `.docs/production-readiness.md`
 
 ## Definition of Done
 

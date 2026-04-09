@@ -22,6 +22,7 @@ Web retrieval fails in production for predictable reasons: brittle selectors, en
 Insect ships a single runtime and request contract across:
 - CLI (`insect-engine.js`)
 - HTTP API (`/api/engine`)
+- Transcript API (`/api/youtube/transcript`)
 - MCP server (`packages/mcp`)
 
 ## Product Surface (Current)
@@ -29,6 +30,7 @@ Insect ships a single runtime and request contract across:
 - Browser-based extraction with rotating fingerprint profiles.
 - Multi-engine search fallback with deterministic order enforcement.
 - Google always forced to the final fallback attempt.
+- YouTube transcript fallback adapter chain (`insect_native -> insect_signal -> invidious -> piped -> yt_dlp`).
 - Per-key authorization, rate limiting, and minimum 6s search cooldown.
 - Structured key lifecycle endpoints (`create`, `list`, `inspect`, `revoke`).
 - MCP tool descriptors aligned to API behavior for agent workflows.
@@ -39,16 +41,25 @@ Insect ships a single runtime and request contract across:
 flowchart LR
     A["CLI Clients"] --> D["Request Normalization (`server/core/request.js`)"]
     B["API Clients"] --> C["Express API (`/api/engine`)"]
+    B --> T["Transcript API (`/api/youtube/transcript`)"]
     G["MCP Clients"] --> H["MCP Server (`packages/mcp`)"]
     H --> C
+    H --> T
     C --> E["Auth + Key State (`server/db/keys.js`)"]
+    T --> E
     C --> D
+    T --> Y["Transcript Adapter Engine (`server/core/youtube-transcript.js`)"]
     D --> F["Engine Runtime (`server/core/engine.js`)"]
     F --> S["Search Router (`server/core/search.js`)"]
     S --> S1["DuckDuckGo"]
     S --> S2["Bing"]
     S --> S3["Brave"]
     S --> S4["Google (forced last)"]
+    Y --> Y1["insect_native"]
+    Y --> Y2["insect_signal"]
+    Y --> Y3["invidious"]
+    Y --> Y4["piped"]
+    Y --> Y5["yt_dlp"]
 ```
 
 ## Operational Controls
@@ -57,6 +68,7 @@ flowchart LR
 - Rate limits are enforced per key over a rolling minute window.
 - Request validation is centralized, reducing contract drift across CLI/API/MCP.
 - Error codes are explicit for upstream and browser-launch failure classes.
+- API key auth is header-only (`x-api-key` or `Authorization: Bearer <key>`).
 
 ## Quick Start
 
@@ -95,6 +107,20 @@ curl -sS http://localhost:3000/api/engine \
   }'
 ```
 
+YouTube transcript example:
+
+```bash
+curl -sS http://localhost:3000/api/youtube/transcript \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: sk_xxx" \
+  -d '{
+    "url":"https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+    "language":"en",
+    "format":"json",
+    "methods":["insect_native","insect_signal","invidious","piped","yt_dlp"]
+  }'
+```
+
 ## MCP Integration
 
 ```bash
@@ -102,6 +128,18 @@ export INSECT_API_URL=http://localhost:3000
 export INSECT_API_KEY=sk_xxx
 npm run mcp
 ```
+
+Optional transcript adapter tuning:
+
+```bash
+export INSECT_INVIDIOUS_INSTANCES=https://invidious.nerdvpn.de,https://yewtu.be
+export INSECT_PIPED_INSTANCES=https://pipedapi.kavin.rocks,https://pipedapi.adminforge.de
+export INSECT_YTDLP_COMMANDS=yt-dlp,yt-dlp.exe
+```
+
+Transcript MCP tool:
+
+- `transcribe-youtube`
 
 Generate an MCP config snippet:
 
@@ -126,6 +164,7 @@ bash scripts/deploy-saas-host.sh \
 ```bash
 npm test
 npm run test:mcp
+npm run test:live
 ```
 
 ## Repository Layout
@@ -157,6 +196,7 @@ npm run test:mcp
 - [SaaS Deployment](./DEPLOYMENT-SAAS.md)
 - [Architecture Deep Dive](./.docs/architecture.md)
 - [API Reference](./.docs/api-reference.md)
+- [Production Readiness](./.docs/production-readiness.md)
 
 ## License
 

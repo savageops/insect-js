@@ -6,20 +6,22 @@
 - `ADMIN_KEY` (required in production; dev default `admin_change_me`)
 - `INSECT_API_URL` (MCP client target, default `http://localhost:3000`)
 - `INSECT_API_KEY` (required by MCP server)
+- `INSECT_INVIDIOUS_INSTANCES` (optional CSV override for transcript fallback)
+- `INSECT_PIPED_INSTANCES` (optional CSV override for transcript fallback)
+- `INSECT_YTDLP_COMMANDS` (optional CSV command list fallback for `yt_dlp`)
+- Key state is persisted in SQLite WAL at `data/keys.sqlite`
 
 ## Authentication
 
-`POST /api/engine` accepts API keys from:
+`POST /api/engine` and `POST /api/youtube/transcript` accept API keys from:
 
 - `x-api-key` header
 - `Authorization: Bearer <key>`
-- `?apikey=<key>` query param
 
 Admin routes under `/api/keys` require:
 
 - `x-admin-key` header
 - or `Authorization: Bearer <admin-key>`
-- or `?adminkey=<admin-key>`
 
 ## Endpoints
 
@@ -59,6 +61,36 @@ Error contract:
 - `502` upstream navigation/extraction failure (`code: "UPSTREAM_REQUEST"`)
 - `503` browser launch failure (`code: "BROWSER_LAUNCH"`)
 
+### `POST /api/youtube/transcript`
+
+Fetch transcript text/segments for a YouTube video with ordered adapter fallback.
+
+Supported fields:
+
+- `url` string (required unless `videoId`)
+- `videoId` string (required unless `url`)
+- `language` string (default `en`)
+- `format` one of `text|json|markdown`
+- `methods` string array or CSV list (`insect_native|insect_signal|invidious|piped|yt_dlp`)
+- `includeSegments` boolean (default `false`)
+- `includeAutoCaptions` boolean (default `true`)
+- `timeout` integer `5..120`
+
+Method behavior:
+
+- `insect_native`: direct watch-page caption extraction path
+- `insect_signal`: direct InnerTube player extraction path
+- `invidious`: Invidious API fallback
+- `piped`: Piped API fallback
+- `yt_dlp`: `yt-dlp` command fallback
+
+Error contract:
+
+- `400` validation failure (`code: "VALIDATION_ERROR"`)
+- `403` invalid/revoked key
+- `429` key rate-limit violation
+- `502` all transcript adapters failed (`code: "TRANSCRIPT_UNAVAILABLE"`)
+
 ### `POST /api/keys/create`
 
 Creates a key.
@@ -89,13 +121,15 @@ The MCP server exposes:
 - `run-engine`
 - `engine-search`
 - `search-web`
+- `transcribe-youtube`
 - `extract-links`
 - `engine-page-metadata`
 
-All tools call the same `POST /api/engine` API endpoint via `packages/mcp/api-client.js`.
+Tools call `POST /api/engine` and `POST /api/youtube/transcript` via `packages/mcp/api-client.js`.
 Search tools state the 6 second per-key cooldown and Google-last fallback order in their descriptors.
 
 ## Test Commands
 
 - `npm test` - full Vitest matrix
 - `npm run test:mcp` - MCP client + stdio smoke tests
+- `npm run test:live` - opt-in live browser/network coverage

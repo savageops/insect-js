@@ -2,11 +2,11 @@
 
 ## Objective
 
-Keep CLI, API, and MCP on one hardened engine contract, minimize drift risk, and preserve deterministic behavior under production load.
+Keep CLI, API, and MCP on hardened engine and transcript contracts, minimize drift risk, and preserve deterministic behavior under production load.
 
 ## What Is Standardized
 
-### 1. One canonical request contract
+### 1. One canonical engine request contract
 
 `server/core/request.js` owns:
 
@@ -43,17 +43,40 @@ Result:
 - `502` upstream navigation/extraction failure (`UPSTREAM_REQUEST`)
 - `503` browser launch failure (`BROWSER_LAUNCH`)
 
-### 4. Key-store durability and abuse controls
+### 4. Transcript capability is a first-class runtime surface
+
+`server/core/youtube-transcript.js` now owns the ordered transcript adapter
+chain used by:
+
+- `server/routes/youtube-transcript.js`
+- `packages/mcp/index.js` via `transcribe-youtube`
+
+Default adapter order:
+
+- `insect_native`
+- `insect_signal`
+- `invidious`
+- `piped`
+- `yt_dlp`
+
+Result:
+
+- transcript behavior is isolated from engine/search complexity
+- API and MCP share one transcript contract
+- adapter fallback order is explicit and documented
+
+### 5. Key-store durability and abuse controls
 
 `server/db/keys.js` includes:
 
-- temp-file + rename writes
+- SQLite-backed key state (`data/keys.sqlite`)
+- WAL journal mode for safer write durability
 - rate-limit normalization with bounded defaults
 - per-key search cooldown (minimum six seconds)
 - expiry metadata (`expiredAt`)
 - normalized key creation parameters
 
-### 5. MCP hardening
+### 6. MCP hardening
 
 `packages/mcp/api-client.js` includes:
 
@@ -64,7 +87,7 @@ Result:
   - `INSECT_API_URL`
   - `INSECT_API_KEY`
 
-`packages/mcp/index.js` uses that client and exposes engine-aligned tools.
+`packages/mcp/index.js` uses that client and exposes engine-aligned tools plus `transcribe-youtube`.
 
 ## Verification Matrix
 
@@ -72,13 +95,17 @@ Recommended checks:
 
 - `npm test`
 - `npm run test:mcp`
+- `npm run test:live`
 - MCP stdio smoke:
   - `INSECT_API_KEY=sk_test`
   - `INSECT_API_URL=http://127.0.0.1:3000`
   - `node packages/mcp/index.js`
+- Transcript runtime smoke:
+  - `POST /api/youtube/transcript` against a known public video ID
+  - confirm selected adapter method and transcript payload shape
 
 ## Operational Notes
 
 - Production must set `ADMIN_KEY` explicitly.
-- Maintain one external engine endpoint (`POST /api/engine`) to avoid contract split.
-- Preserve request contract parity when adding new engine capability.
+- Preserve request contract parity when adding new engine or transcript capability.
+- API and admin keys are header-only.

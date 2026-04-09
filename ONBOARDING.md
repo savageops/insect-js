@@ -68,6 +68,19 @@ This checks:
 - `/health`
 - authenticated `/api/engine`
 
+For YouTube transcript capability, run:
+
+```bash
+curl -sS http://localhost:3000/api/youtube/transcript \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: sk_xxx" \
+  -d '{
+    "videoId":"dQw4w9WgXcQ",
+    "format":"text",
+    "methods":["insect_native","insect_signal","invidious","piped","yt_dlp"]
+  }'
+```
+
 ## Run the MCP Server
 
 Set env first:
@@ -75,6 +88,14 @@ Set env first:
 ```bash
 export INSECT_API_URL=http://localhost:3000
 export INSECT_API_KEY=sk_xxx
+```
+
+Optional transcript adapter tuning:
+
+```bash
+export INSECT_INVIDIOUS_INSTANCES=https://invidious.nerdvpn.de,https://yewtu.be
+export INSECT_PIPED_INSTANCES=https://pipedapi.kavin.rocks,https://pipedapi.adminforge.de
+export INSECT_YTDLP_COMMANDS=yt-dlp,yt-dlp.exe
 ```
 
 Then run:
@@ -100,6 +121,7 @@ bash scripts/render-mcp-config.sh \
 ```bash
 npm test
 npm run test:mcp
+npm run test:live
 ```
 
 ## Common Troubleshooting
@@ -110,6 +132,7 @@ npm run test:mcp
 2. `403` on engine API
 - Check your `x-api-key` value
 - Ensure the key is active and not rate-limited
+- API keys are accepted via headers only (`x-api-key` or `Authorization: Bearer <key>`)
 
 3. `429` on search requests
 - Search mode enforces a minimum 6 second cooldown per key
@@ -121,3 +144,8 @@ npm run test:mcp
 
 5. Admin key routes failing
 - Check `ADMIN_KEY` in `.env` and request header `x-admin-key`
+
+6. Transcript route returns `502`
+- The adapter chain exhausted all providers (`insect_native`, `insect_signal`, `invidious`, `piped`, `yt_dlp`)
+- Ensure outbound network access to YouTube
+- Ensure `yt-dlp` is installed or reachable via `INSECT_YTDLP_COMMANDS`
