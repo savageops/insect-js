@@ -10,7 +10,7 @@ Native Rust runtime for Insect.
 - `POST /api/engine`
 - `POST /api/youtube/transcript`
 - `engine` CLI subcommand for page extraction and search
-- `transcribe-youtube` CLI subcommand
+- `transcribe-youtube` CLI subcommand with native `--output` file support
 - Windows-native binary output via `cargo build --release`
 
 ## Parity Status
@@ -66,8 +66,15 @@ Runtime env:
 Packaged Codex skill:
 
 - `packages/skills/insect-rs-runtime`
+- `packages/skills/insect`
 - `packages/skills/insect-rs-runtime/scripts/run-insect-rs.ps1`
+- `packages/skills/insect-rs-runtime/scripts/save-insect-transcript.ps1`
 - `packages/skills/insect-rs-runtime/assets/bin/insect-rs.exe`
+
+Cross-runtime repo scripts:
+
+- `node scripts/save-transcript.mjs --runtime rust ...`
+- `node scripts/harvest-search.mjs --runtime rust ...`
 
 ## Test
 
@@ -87,6 +94,10 @@ bash scripts/test-rust.sh
 
 ```bash
 cargo run --manifest-path rust/Cargo.toml -- transcribe-youtube --video-id dQw4w9WgXcQ --format text --timeout 20
+```
+
+```bash
+cargo run --manifest-path rust/Cargo.toml -- transcribe-youtube --video-id dQw4w9WgXcQ --format json --output out/transcript.json
 ```
 
 ```bash

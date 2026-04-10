@@ -8,6 +8,8 @@
     "engine": "node insect-engine.js",
     "server": "node api.js",
     "mcp": "node packages/mcp/index.js",
+    "transcript:save": "node scripts/save-transcript.mjs",
+    "research:harvest": "node scripts/harvest-search.mjs",
     "install-browser": "node node_modules/puppeteer/install.mjs",
     "install-mcp": "cd packages/mcp && npm install",
     "install-all": "npm install && cd packages/mcp && npm install",

@@ -1,6 +1,6 @@
 ---
 name: insect-rs-runtime
-description: Operate the compiled Insect Rust runtime for local HTTP serving, page extraction, search fallback, artifact capture, and YouTube transcript retrieval. Use when Codex needs to run or validate the bundled `insect-rs.exe`, inspect CLI help, execute `engine` or `transcribe-youtube` commands, smoke-test the Rust runtime before packaging or deployment, or produce runtime artifacts such as text output, screenshots, and PDFs from the native binary.
+description: Canonical Insect skill for the compiled Rust runtime. Use when the user says `insect`, `insect skill`, `insect runtime`, `insect-rs`, `insect rs runtime`, or asks Codex to use Insect for crawling, scraping, page extraction, search extraction, SERP retrieval, web research, YouTube transcript retrieval, runtime validation, CLI help inspection, HTTP serving, or native-binary packaging. Route broad "use insect to search/scour the web or YouTube" requests to this skill unless the user explicitly names a different Insect surface.
 ---
 
 # Insect RS Runtime
@@ -8,6 +8,27 @@ description: Operate the compiled Insect Rust runtime for local HTTP serving, pa
 ## Overview
 
 Use the bundled Windows release binary and thin wrapper scripts to operate `insect-rs` without reconstructing the CLI contract from source. Keep the flow deterministic: discover the command surface, choose the correct mode, run through the wrapper, and verify the resulting payload or artifact.
+
+## Interpretation Rules
+
+- Treat this as the default and canonical Insect skill.
+- If the user says `use insect`, `use the insect skill`, or `use insect runtime`, select this skill unless they explicitly point at another Insect package.
+- If the user asks for web research, search harvesting, page scraping, or YouTube transcript collection with Insect, use this skill and map the request to the correct command surface.
+- Do not stop at "the skill exists"; route the task into `engine`, `transcribe-youtube`, or `serve`.
+- For repeated research harvests, prefer serialized runs and explicit output files.
+
+## Intent Map
+
+- Web page extraction, scraping, or content retrieval
+  Use `engine --url ...`
+- Search, SERP retrieval, web scouting, or research lead generation
+  Use `engine --query ...`
+- YouTube transcript retrieval, video transcription, or subtitle harvesting
+  Use `transcribe-youtube --url ...` or `--video-id ...`
+- Runtime health checks, local API use, or SaaS-host verification
+  Use `serve`
+- Help, discovery, or contract inspection
+  Use `scripts/run-insect-rs.ps1 --help` and then the relevant subcommand help
 
 ## Quick Start
 
@@ -118,6 +139,8 @@ powershell -ExecutionPolicy Bypass -File .\scripts\run-insect-rs.ps1 transcribe-
   Use from Git Bash or similar Windows-hosted Bash shells.
 - `scripts/smoke-insect-rs.ps1`
   Use for a fast help-plus-engine smoke pass.
+- `scripts/save-insect-transcript.ps1`
+  Use to capture transcript output directly to a file.
 - `references/runtime-contract.md`
   Read for the command and environment contract.
 - `references/workflows.md`

@@ -70,6 +70,7 @@ Rust scope:
 - `/api/engine`
 - `/api/youtube/transcript`
 - `engine` CLI subcommand with page extraction, search fallback, screenshot, PDF, and output-file support
+- `transcribe-youtube` CLI subcommand with native `--output` file support
 
 Rust runtime env:
 
@@ -80,8 +81,15 @@ Rust runtime env:
 Packaged runtime skill:
 
 - `packages/skills/insect-rs-runtime`
+- alias trigger skill: `packages/skills/insect`
 - launcher script: `packages/skills/insect-rs-runtime/scripts/run-insect-rs.ps1`
+- transcript capture helper: `packages/skills/insect-rs-runtime/scripts/save-insect-transcript.ps1`
 - bundled binary: `packages/skills/insect-rs-runtime/assets/bin/insect-rs.exe`
+
+Cross-runtime operator scripts:
+
+- `node scripts/save-transcript.mjs --runtime js|rust ...`
+- `node scripts/harvest-search.mjs --runtime js|rust ...`
 
 ## Create an API Key
 

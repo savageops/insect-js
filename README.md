@@ -118,7 +118,13 @@ Rust surface:
 - `POST /api/engine`
 - `POST /api/youtube/transcript`
 - `engine` CLI subcommand with page extraction, search, screenshot, PDF, and output-file support
+- `transcribe-youtube` CLI subcommand with native `--output` file support
 - compiled binary output at `rust/target/release/insect-rs.exe`
+
+Cross-runtime operator scripts:
+
+- `node scripts/save-transcript.mjs --runtime js|rust ...`
+- `node scripts/harvest-search.mjs --runtime js|rust ...`
 
 Rust runtime env:
 
@@ -129,7 +135,9 @@ Rust runtime env:
 Packaged runtime skill:
 
 - `packages/skills/insect-rs-runtime`
+- alias trigger skill at `packages/skills/insect`
 - bundled Windows launcher at `packages/skills/insect-rs-runtime/scripts/run-insect-rs.ps1`
+- transcript capture helper at `packages/skills/insect-rs-runtime/scripts/save-insect-transcript.ps1`
 - bundled release artifact at `packages/skills/insect-rs-runtime/assets/bin/insect-rs.exe`
 
 ## API Example
@@ -205,6 +213,14 @@ npm test
 npm run test:mcp
 npm run test:live
 powershell -ExecutionPolicy Bypass -File scripts/test-rust.ps1
+```
+
+Cross-runtime examples:
+
+```bash
+node scripts/save-transcript.mjs --runtime js --video-id dQw4w9WgXcQ --output .docs/tmp/js-transcript.json
+node scripts/save-transcript.mjs --runtime rust --video-id dQw4w9WgXcQ --output .docs/tmp/rust-transcript.json
+node scripts/harvest-search.mjs --runtime rust --query "site:github.com simdjson parser SIMD" --output-dir .docs/research/harvest-rust
 ```
 
 ## Repository Layout

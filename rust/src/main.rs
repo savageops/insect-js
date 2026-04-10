@@ -136,6 +136,7 @@ Options:
   --include-segments                  Include timestamped segments in the response
   --include-auto-captions             Allow auto-generated captions when manual subtitles are unavailable
   --methods <LIST>                    Comma-delimited adapter order override
+  --output <PATH>                     Write formatted transcript output to disk
   -h, --help                          Print this help text
 
 Methods:
@@ -144,11 +145,13 @@ Methods:
 Notes:
   Adapters run in order until one succeeds.
   --include-segments keeps timestamped segment data in the JSON payload.
+  --output writes the formatted transcript payload to disk.
 
 Examples:
   insect-rs.exe transcribe-youtube --video-id dQw4w9WgXcQ --format text
   insect-rs.exe transcribe-youtube --url https://www.youtube.com/watch?v=dQw4w9WgXcQ --format json --include-segments
   insect-rs.exe transcribe-youtube --video-id dQw4w9WgXcQ --methods insect_native,insect_signal,yt_dlp
+  insect-rs.exe transcribe-youtube --video-id dQw4w9WgXcQ --format json --output out/transcript.json
 ";
 
 #[derive(Debug, Parser)]
@@ -235,6 +238,8 @@ enum Commands {
             long_help = "Override transcript adapter order. Accepted values: insect_native, insect_signal, invidious, piped, yt_dlp."
         )]
         methods: Vec<String>,
+        #[arg(long, help = "Write formatted transcript output to this file path")]
+        output: Option<PathBuf>,
     },
 }
 
@@ -391,6 +396,7 @@ async fn main() -> Result<()> {
             include_segments,
             include_auto_captions,
             methods,
+            output,
         } => {
             let result = fetch_youtube_transcript(
                 TranscriptInput {
@@ -411,7 +417,22 @@ async fn main() -> Result<()> {
             )
             .await
             .map_err(|error| anyhow::anyhow!("{} ({})", error.message, error.field))?;
-            println!("{}", serde_json::to_string_pretty(&result)?);
+            if !result.success {
+                eprintln!(
+                    "[error] {}",
+                    result
+                        .error
+                        .unwrap_or_else(|| "Transcript fetch failure".to_string())
+                );
+                std::process::exit(1);
+            }
+            let transcript_output = result.output.unwrap_or_default();
+            if let Some(path) = output {
+                write_output_file(&path, &transcript_output)?;
+                eprintln!("[meta] Output saved: {}", path.display());
+            } else {
+                println!("{transcript_output}");
+            }
             Ok(())
         }
     }
@@ -485,10 +506,7 @@ async fn run_engine_cli(args: EngineArgs) -> Result<()> {
 
     let output = result.output.unwrap_or_default();
     if let Some(path) = args.output {
-        if let Some(parent) = path.parent() {
-            fs::create_dir_all(parent)?;
-        }
-        fs::write(&path, &output)?;
+        write_output_file(&path, &output)?;
         if args.metadata {
             eprintln!("[meta] Output saved: {}", path.display());
         }
@@ -496,6 +514,14 @@ async fn run_engine_cli(args: EngineArgs) -> Result<()> {
         println!("{output}");
     }
 
+    Ok(())
+}
+
+fn write_output_file(path: &PathBuf, content: &str) -> Result<()> {
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent)?;
+    }
+    fs::write(path, content)?;
     Ok(())
 }
 

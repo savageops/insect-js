@@ -1,4 +1,4 @@
 interface:
   display_name: "Insect RS Runtime"
-  short_description: "Run the compiled Insect Rust runtime"
-  default_prompt: "Use $insect-rs-runtime to run, validate, and operate the compiled Insect Rust runtime."
+  short_description: "Canonical Insect crawl, search, and transcript runtime"
+  default_prompt: "Use $insect-rs-runtime as the canonical Insect skill to crawl, search, transcribe, validate, or serve with the bundled Rust runtime."

@@ -59,6 +59,8 @@
   - `text`
   - `json`
   - `markdown`
+- Supported file output:
+  - `--output <PATH>` writes the formatted transcript payload to disk
 
 ## Output Surfaces
 

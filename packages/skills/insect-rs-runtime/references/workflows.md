@@ -24,15 +24,18 @@
 
 1. Use `engine --query`.
 2. Set `--search-engines` explicitly when the task depends on crawl order.
-3. Treat search results as successful only after the response contains usable normalized results.
-4. Inspect metadata for engine attempts when the result quality looks wrong.
+3. Serialize harvest-style search runs instead of launching multiple concurrent `engine --query` calls against the same runtime state.
+4. Treat search results as successful only after the response contains usable normalized results.
+5. Inspect metadata for engine attempts when the result quality looks wrong.
 
 ## Fetch a Transcript
 
 1. Use `transcribe-youtube --video-id` for the cleanest locator when the ID is known.
-2. Use `--methods` only when you need to pin or inspect adapter order.
-3. Use `--include-segments` when timestamps matter.
-4. Confirm the returned method and format before summarizing the transcript.
+2. Prefer native `--output` when you are calling the Rust runtime directly.
+3. Use `scripts/save-insect-transcript.ps1` when you want the wrapper to handle the save path for you.
+4. Use `--methods` only when you need to pin or inspect adapter order.
+5. Use `--include-segments` when timestamps matter.
+6. Confirm the returned method and format before summarizing the transcript.
 
 ## Run a Fast Smoke Pass
 
