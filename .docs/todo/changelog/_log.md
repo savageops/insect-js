@@ -1,5 +1,6 @@
 # Changelog Log
 
+- 2026-04-10: Refreshed the packaged `packages/skills/insect-rs-runtime/assets/bin/insect-rs.exe` artifact to match the latest `rust/target/release/insect-rs.exe`, then revalidated both the live skill wrapper and packaged skill wrapper with transcript help and transcript-save smoke runs.
 - 2026-04-10: Added native Rust `transcribe-youtube --output` support, plus cross-runtime repo scripts `scripts/save-transcript.mjs` and `scripts/harvest-search.mjs` so JS and Rust share the same transcript-save and serialized research-harvest ergonomics.
 - 2026-04-10: Added the `insect` alias skill, a transcript capture helper script, and explicit serialized-harvest guidance so agents can trigger Insect from natural phrasing and persist transcript artifacts without reconstructing stdout capture logic.
 - 2026-04-10: Created the `insect-rs-runtime` skill with bundled `insect-rs.exe`, wrapper scripts, runtime references, and mirrored packaging under `packages/skills/insect-rs-runtime`; revalidated with `quick_validate.py`, wrapper help checks, and `scripts/smoke-insect-rs.ps1`.
