@@ -25,6 +25,9 @@ Insect ships a single runtime and request contract across:
 - Transcript API (`/api/youtube/transcript`)
 - MCP server (`packages/mcp`)
 
+It also includes a native sibling runtime in [`rust/`](./rust/README.md) for teams that want a compiled Windows `.exe` surface.
+The packaged Codex skill for that runtime lives in `packages/skills/insect-rs-runtime`.
+
 ## Product Surface (Current)
 
 - Browser-based extraction with rotating fingerprint profiles.
@@ -34,6 +37,7 @@ Insect ships a single runtime and request contract across:
 - Per-key authorization, rate limiting, and minimum 6s search cooldown.
 - Structured key lifecycle endpoints (`create`, `list`, `inspect`, `revoke`).
 - MCP tool descriptors aligned to API behavior for agent workflows.
+- Native Rust runtime with browser-backed engine, search fallback, transcripts, and SQLite key-state.
 
 ## Architecture
 
@@ -92,6 +96,41 @@ Run a smoke test:
 ```bash
 bash scripts/smoke-test.sh --base-url http://localhost:3000 --api-key sk_xxx
 ```
+
+## Native Runtime
+
+Build the native sibling:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/build-rust.ps1
+```
+
+Or:
+
+```bash
+bash scripts/build-rust.sh
+```
+
+Rust surface:
+
+- `GET /health`
+- key lifecycle routes
+- `POST /api/engine`
+- `POST /api/youtube/transcript`
+- `engine` CLI subcommand with page extraction, search, screenshot, PDF, and output-file support
+- compiled binary output at `rust/target/release/insect-rs.exe`
+
+Rust runtime env:
+
+- `PORT` for the HTTP listener
+- `ADMIN_KEY` for admin route protection
+- `INSECT_RS_DB_PATH` to override the Rust SQLite path
+
+Packaged runtime skill:
+
+- `packages/skills/insect-rs-runtime`
+- bundled Windows launcher at `packages/skills/insect-rs-runtime/scripts/run-insect-rs.ps1`
+- bundled release artifact at `packages/skills/insect-rs-runtime/assets/bin/insect-rs.exe`
 
 ## API Example
 
@@ -165,6 +204,7 @@ bash scripts/deploy-saas-host.sh \
 npm test
 npm run test:mcp
 npm run test:live
+powershell -ExecutionPolicy Bypass -File scripts/test-rust.ps1
 ```
 
 ## Repository Layout
@@ -179,9 +219,11 @@ npm run test:live
 |   |-- middleware/
 |   `-- db/
 |-- packages/
-|   `-- mcp/
+|   |-- mcp/
+|   `-- skills/
 |-- scripts/
 |-- tests/
+|-- rust/
 |-- .docs/
 |-- .refs/
 |-- CONTRIBUTING.md
@@ -193,6 +235,8 @@ npm run test:live
 
 - [Onboarding](./ONBOARDING.md)
 - [Contributing](./CONTRIBUTING.md)
+- [Rust Runtime](./rust/README.md)
+- `packages/skills/insect-rs-runtime`
 - [SaaS Deployment](./DEPLOYMENT-SAAS.md)
 - [Architecture Deep Dive](./.docs/architecture.md)
 - [API Reference](./.docs/api-reference.md)

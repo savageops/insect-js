@@ -47,6 +47,42 @@ Default API URL:
 
 - `http://localhost:3000`
 
+## Optional Native Runtime
+
+If you want the compiled Rust sibling instead of the Node server:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/build-rust.ps1
+powershell -ExecutionPolicy Bypass -File scripts/run-rust.ps1
+```
+
+Or:
+
+```bash
+bash scripts/build-rust.sh
+bash scripts/run-rust.sh
+```
+
+Rust scope:
+
+- `/health`
+- `/api/keys/*`
+- `/api/engine`
+- `/api/youtube/transcript`
+- `engine` CLI subcommand with page extraction, search fallback, screenshot, PDF, and output-file support
+
+Rust runtime env:
+
+- `PORT` controls the listening port
+- `ADMIN_KEY` protects admin routes
+- `INSECT_RS_DB_PATH` overrides the Rust SQLite location
+
+Packaged runtime skill:
+
+- `packages/skills/insect-rs-runtime`
+- launcher script: `packages/skills/insect-rs-runtime/scripts/run-insect-rs.ps1`
+- bundled binary: `packages/skills/insect-rs-runtime/assets/bin/insect-rs.exe`
+
 ## Create an API Key
 
 ```bash
@@ -124,6 +160,12 @@ npm run test:mcp
 npm run test:live
 ```
 
+Rust checks:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/test-rust.ps1
+```
+
 ## Common Troubleshooting
 
 1. Browser launch fails
@@ -144,6 +186,10 @@ npm run test:live
 
 5. Admin key routes failing
 - Check `ADMIN_KEY` in `.env` and request header `x-admin-key`
+
+6. Rust key state appears in the wrong location
+- Set `INSECT_RS_DB_PATH` before running `scripts/run-rust.ps1` or `scripts/run-rust.sh`
+- Default Rust path is `rust/data/keys.sqlite`
 
 6. Transcript route returns `502`
 - The adapter chain exhausted all providers (`insect_native`, `insect_signal`, `invidious`, `piped`, `yt_dlp`)

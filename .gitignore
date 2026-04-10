@@ -8,3 +8,5 @@ Thumbs.db
 /.refs
 /.untrack
 /todo
+/rust/target
+/rust/data

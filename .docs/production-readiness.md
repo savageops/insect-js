@@ -89,6 +89,17 @@ Result:
 
 `packages/mcp/index.js` uses that client and exposes engine-aligned tools plus `transcribe-youtube`.
 
+### 7. Native runtime foundation
+
+`rust/` now provides a compiled sibling binary with:
+
+- Axum HTTP bootstrap
+- SQLite-backed key state
+- browser-backed engine and search fallback
+- transcript adapter parity
+- CLI engine parity including screenshot/PDF/output-file support
+- Windows `.exe` build output
+
 ## Verification Matrix
 
 Recommended checks:
@@ -96,6 +107,7 @@ Recommended checks:
 - `npm test`
 - `npm run test:mcp`
 - `npm run test:live`
+- `powershell -ExecutionPolicy Bypass -File scripts/test-rust.ps1`
 - MCP stdio smoke:
   - `INSECT_API_KEY=sk_test`
   - `INSECT_API_URL=http://127.0.0.1:3000`
@@ -107,5 +119,6 @@ Recommended checks:
 ## Operational Notes
 
 - Production must set `ADMIN_KEY` explicitly.
+- Rust operators should pin `INSECT_RS_DB_PATH` when they need a non-default SQLite location.
 - Preserve request contract parity when adding new engine or transcript capability.
 - API and admin keys are header-only.

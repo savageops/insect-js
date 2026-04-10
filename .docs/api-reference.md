@@ -4,6 +4,7 @@
 
 - `PORT` (default `3000`)
 - `ADMIN_KEY` (required in production; dev default `admin_change_me`)
+- `INSECT_RS_DB_PATH` (Rust runtime only; default `data/keys.sqlite` relative to `rust/`)
 - `INSECT_API_URL` (MCP client target, default `http://localhost:3000`)
 - `INSECT_API_KEY` (required by MCP server)
 - `INSECT_INVIDIOUS_INSTANCES` (optional CSV override for transcript fallback)
@@ -24,6 +25,11 @@ Admin routes under `/api/keys` require:
 - or `Authorization: Bearer <admin-key>`
 
 ## Endpoints
+
+Runtime note:
+
+- JS runtime and Rust runtime now both implement the published API surface.
+- Rust runtime adds a native CLI surface while preserving the same request contract for `/api/engine`.
 
 ### `GET /health`
 
@@ -133,3 +139,4 @@ Search tools state the 6 second per-key cooldown and Google-last fallback order 
 - `npm test` - full Vitest matrix
 - `npm run test:mcp` - MCP client + stdio smoke tests
 - `npm run test:live` - opt-in live browser/network coverage
+- `powershell -ExecutionPolicy Bypass -File scripts/test-rust.ps1` - Rust compile + unit verification

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Insect RS Runtime"
+  short_description: "Run the compiled Insect Rust runtime"
+  default_prompt: "Use $insect-rs-runtime to run, validate, and operate the compiled Insect Rust runtime."

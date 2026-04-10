@@ -29,6 +29,17 @@ insect-js/
 |   `-- mcp/
 |       |-- index.js                # MCP stdio server + tool definitions
 |       `-- api-client.js           # MCP HTTP client + env config parsing
+|-- rust/
+|   |-- src/
+|   |   |-- main.rs                 # Native CLI/server entrypoint
+|   |   |-- routes.rs               # Axum routes for health/keys/engine/transcript
+|   |   |-- auth.rs                 # API/admin header auth helpers + middleware
+|   |   |-- db.rs                   # SQLite WAL key store
+|   |   |-- engine.rs               # Native browser-backed engine/search runtime
+|   |   |-- request.rs              # Native request normalization/validation
+|   |   |-- search.rs               # Search fallback orchestration
+|   |   `-- transcript.rs           # Native transcript adapter chain
+|   `-- README.md                   # Native runtime usage and parity notes
 |-- scripts/                        # Bootstrap, deploy, smoke-test helpers
 |-- tests/                          # Vitest suites (unit + integration + MCP)
 |-- .docs/                          # Operational and architecture docs
@@ -51,6 +62,8 @@ insect-js/
 
 Engine flows route through `server/core/engine.js`.
 Transcript flows route through `server/core/youtube-transcript.js`.
+Native engine flows route through `rust/src/engine.rs`.
+Native transcript flows route through `rust/src/transcript.rs`.
 
 ## Data Flow
 
@@ -60,9 +73,23 @@ Transcript flows route through `server/core/youtube-transcript.js`.
 4. Transcript input is normalized and routed through `server/core/youtube-transcript.js`.
 5. API and MCP return payload + metadata.
 
+## Native Runtime Slice
+
+`rust/` is the compiled sibling runtime.
+
+Current native ownership:
+
+- `GET /health`
+- admin/API key auth
+- SQLite key lifecycle
+- `POST /api/engine`
+- `POST /api/youtube/transcript`
+- native CLI engine/transcript commands
+
 ## Auth and Key Lifecycle
 
 - API keys live in `data/keys.sqlite`.
+- Rust runtime key state defaults to `rust/data/keys.sqlite` and can be overridden with `INSECT_RS_DB_PATH`.
 - Validation includes active/revoked/expired checks and per-key rate limiting.
 - Search requests enforce a minimum six-second cooldown per key.
 - SQLite WAL is enabled for safer write durability and concurrent request handling.
